@@ -1,0 +1,60 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+// Users table: Stores information about users
+Table users {
+    id integer [primary key]         // User unique ID
+    name varchar                     // User's name
+    email varchar [unique, not null] // User's email
+    created_at timestamp             // Record creation timestamp
+    updated_at timestamp             // Last update timestamp
+    deleted_at timestamp             // Soft delete timestamp
+  }
+  
+  // Accounts table: Each account is linked to a user and owns a store
+  Table accounts {
+    id integer [primary key]      // Account unique ID
+    user_id integer [not null]    // Reference to the user (Foreign key to users table)
+    password varchar [not null]   // Hashed password
+    created_at timestamp          // Record creation timestamp
+    updated_at timestamp          // Last update timestamp
+    deleted_at timestamp          // Soft delete timestamp
+  }
+  
+  // Stores table: Represents stores owned by accounts
+  Table stores {
+    id integer [primary key]          // Store unique ID
+    name varchar [not null]           // Name of the store
+    created_at timestamp              // Record creation timestamp
+    updated_at timestamp              // Last update timestamp
+    deleted_at timestamp              // Soft delete timestamp
+  }
+  
+  // Staff table: Represents staff working for accounts/stores
+  Table staff {
+    id integer [primary key]          // Staff unique ID
+    account_id integer [not null]
+    store_id integer [not null]     // Reference to the account/store they work for (Foreign key to accounts table)
+    role varchar [not null]           // Staff role (e.g., "Manager", "Cashier")
+    created_at timestamp              // Record creation timestamp
+    updated_at timestamp              // Last update timestamp
+    deleted_at timestamp              // Soft delete timestamp
+  }
+  
+  // Products table: Represents products listed in stores
+  Table products {
+    id integer [primary key]          // Product unique ID
+    name varchar [not null]           // Name of the product
+    thumbnail varchar                 // Thumbnail URL/path
+    store_id integer [not null]       // Reference to the store that owns this product (Foreign key to stores table)
+    created_at timestamp              // Record creation timestamp
+    updated_at timestamp              // Last update timestamp
+    deleted_at timestamp              // Soft delete timestamp
+  }
+  
+  Ref: users.id - accounts.user_id
+  Ref: stores.id < products.store_id
+  Ref: accounts.id - staff.account_id  
+  Ref: staff.store_id - accounts.id
+  Ref: staff.store_id - stores.id
+  

@@ -1,0 +1,1 @@
+console.log("Node API is running on port 3000");
