@@ -28,7 +28,14 @@ func (c ProductController) RegisterRoutes(server *gin.Engine) {
 }
 
 func (c *ProductController) GetAllProducts(ctx *gin.Context) {
-	products, err := c.ProductService.GetAllProducts()
+	var query dto.ProductQueryDTO
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid query parameters",
+		})
+	}
+
+	products, err := c.ProductService.GetAllProducts(query)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
