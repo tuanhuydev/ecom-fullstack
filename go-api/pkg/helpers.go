@@ -3,6 +3,7 @@ package pkg
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -30,4 +31,20 @@ func GetEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func CalculatePagination(page, pageSize int, totalCount int64) PaginationMeta {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	return PaginationMeta{
+		CurrentPage:  page,
+		PageSize:     pageSize,
+		TotalRecords: totalCount,
+		TotalPages:   int(math.Ceil(float64(totalCount) / float64(pageSize))),
+	}
 }
