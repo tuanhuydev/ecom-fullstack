@@ -9,7 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetAllProductsService() ([]models.Product, error) {
+type ProductService struct{}
+
+func NewProductService() *ProductService {
+	return &ProductService{}
+}
+
+func (s *ProductService) GetAllProducts() ([]models.Product, error) {
 	var products []models.Product
 	if err := database.DB.Where("deleted_at IS NULL").Find(&products).Error; err != nil {
 		return nil, err
@@ -18,7 +24,7 @@ func GetAllProductsService() ([]models.Product, error) {
 	return products, nil
 }
 
-func GetProductByIdService(id string) (models.Product, error) {
+func (s *ProductService) GetProductById(id string) (models.Product, error) {
 	var product models.Product
 	if err := database.DB.Where("id = ?", id).First(&product).Error; err != nil {
 		return models.Product{}, err
@@ -27,7 +33,7 @@ func GetProductByIdService(id string) (models.Product, error) {
 	return product, nil
 }
 
-func CreateProductService(body dto.CreateProductDTO) (string, error) {
+func (s *ProductService) CreateProduct(body dto.CreateProductDTO) (string, error) {
 	productModel := models.Product{
 		ID:       uuid.New().String(),
 		Name:     body.Name,
@@ -45,13 +51,13 @@ func CreateProductService(body dto.CreateProductDTO) (string, error) {
 	return productModel.ID, nil
 }
 
-func UpdateProductService(id string, body dto.UpdateProductDTO) error {
+func (s *ProductService) UpdateProduct(id string, body dto.UpdateProductDTO) error {
 	var existingProduct models.Product
 	if err := database.DB.Where("id = ?", id).First(&existingProduct).Error; err != nil {
 		return err
 	}
 
-	updatedProduct := map[string]interface{}{}
+	updatedProduct := map[string]any{}
 	if body.Name != nil && len(*body.Name) > 0 {
 		updatedProduct["name"] = body.Name
 	}
@@ -76,15 +82,13 @@ func UpdateProductService(id string, body dto.UpdateProductDTO) error {
 	return nil
 }
 
-func DeleteProductService(id string) error {
-	// Soft delete the product
-	updateProduct := map[string]interface{}{
+func (s *ProductService) DeleteProduct(id string) (string, error) {
+	updateProduct := map[string]any{
 		"deleted_at": time.Now(),
 	}
 
 	if err := database.DB.Model(&models.Product{}).Where("id = ?", id).Updates(updateProduct).Error; err != nil {
-		return err
+		return "", err
 	}
-
-	return nil
+	return id, nil
 }

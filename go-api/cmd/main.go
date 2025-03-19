@@ -15,8 +15,17 @@ import (
 func startServer() {
 	fmt.Println("Starting application...")
 	var server *gin.Engine = gin.Default()
-	controllers.RegisterUserRoutes(server)
-	controllers.RegisterProductRoutes(server)
+	// Service declaration
+
+	// Controller declaration
+	userController := controllers.NewUserController()
+	userController.RegisterRoutes(server)
+
+	productController := controllers.NewProductController()
+	productController.RegisterRoutes(server)
+
+	authController := controllers.NewAuthController()
+	authController.RegisterAuthRoutes(server)
 
 	server.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -24,15 +33,16 @@ func startServer() {
 		})
 	})
 
-	server.Run()
+	if err := server.Run(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
 
 func loadEnv() {
 	fmt.Println("Loading environment variables...")
 
 	//  Load .env file first
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		fmt.Println("Error loading .env file")
 	}
 
