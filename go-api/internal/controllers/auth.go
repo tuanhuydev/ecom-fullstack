@@ -21,6 +21,7 @@ func NewAuthController() *AuthController {
 func (c *AuthController) RegisterAuthRoutes(server *gin.Engine) {
 	routes := server.Group("auth")
 	routes.POST("/sign-in", c.SignInWithEmailPassword)
+	routes.POST("/sign-up", c.SignUp)
 }
 
 func (c *AuthController) SignInWithEmailPassword(ctx *gin.Context) {
@@ -43,4 +44,24 @@ func (c *AuthController) SignInWithEmailPassword(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"token": token,
 	})
+}
+
+func (c *AuthController) SignUp(ctx *gin.Context) {
+	var body dto.RegisterUserDTO
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	if err := c.AuthService.SignUp(body); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	ctx.JSON(http.StatusCreated, gin.H{
+		"message": "User created successfully",
+	})
+
 }

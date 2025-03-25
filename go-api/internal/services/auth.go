@@ -3,12 +3,14 @@ package services
 import (
 	"errors"
 	"go-api/internal/database"
+	"go-api/internal/dto"
 	"go-api/internal/models"
 	"log"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -51,4 +53,38 @@ func (s *AuthService) AuthWithEmailPassword(email string, password string) (stri
 
 	return tokenString, nil
 
+}
+
+func (s *AuthService) SignUp(body dto.RegisterUserDTO) error {
+	if err := database.DB.Where("email = ?", body.Email).First(&models.User{}).Error; err == nil {
+		return errors.New("email already exists")
+	}
+
+	tx := database.DB.Begin()
+	user := models.User{
+		ID:    uuid.New().String(),
+		Name:  body.Name,
+		Email: body.Email,
+	}
+
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Create(&models.Account{
+		UserId:   user.ID,
+		Password: string(hashedPassword),
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }
