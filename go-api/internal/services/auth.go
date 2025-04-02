@@ -55,50 +55,36 @@ func (s *AuthService) AuthWithEmailPassword(email string, password string) (stri
 
 }
 
-func (s *AuthService) RegisterUser(body dto.CreateUserDTO) error {
-	var user models.User
-	var account models.Account
-
-	// Start a transaction
-	tx := database.DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
+func (s *AuthService) SignUp(body dto.RegisterUserDTO) error {
+	if err := database.DB.Where("email = ?", body.Email).First(&models.User{}).Error; err == nil {
+		return errors.New("email already exists")
 	}
 
-	// Hash the password
+	tx := database.DB.Begin()
+	user := models.User{
+		ID:    uuid.New().String(),
+		Name:  body.Name,
+		Email: body.Email,
+	}
+
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Create the user
-	user = models.User{
-		ID:    uuid.New().String(),
-		Name:  body.Name,
-		Email: body.Email,
-	}
-	err = tx.Create(&user).Error
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// Create the account
-	account = models.Account{
+	if err := tx.Create(&models.Account{
 		UserId:   user.ID,
 		Password: string(hashedPassword),
-	}
-	err = tx.Create(&account).Error
-	if err != nil {
+	}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit().Error
 }

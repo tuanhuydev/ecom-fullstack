@@ -1,60 +1,98 @@
-// Use DBML to define your database structure
-// Docs: https://dbml.dbdiagram.io/docs
-
-// Users table: Stores information about users
+// Users table: Stores user information
 Table users {
-    id integer [primary key]         // User unique ID
-    name varchar                     // User's name
-    email varchar [unique, not null] // User's email
-    created_at timestamp             // Record creation timestamp
-    updated_at timestamp             // Last update timestamp
-    deleted_at timestamp             // Soft delete timestamp
-  }
-  
-  // Accounts table: Each account is linked to a user and owns a store
-  Table accounts {
-    id integer [primary key]      // Account unique ID
-    user_id integer [not null]    // Reference to the user (Foreign key to users table)
-    password varchar [not null]   // Hashed password
-    created_at timestamp          // Record creation timestamp
-    updated_at timestamp          // Last update timestamp
-    deleted_at timestamp          // Soft delete timestamp
-  }
-  
-  // Stores table: Represents stores owned by accounts
-  Table stores {
-    id integer [primary key]          // Store unique ID
-    name varchar [not null]           // Name of the store
-    created_at timestamp              // Record creation timestamp
-    updated_at timestamp              // Last update timestamp
-    deleted_at timestamp              // Soft delete timestamp
-  }
-  
-  // Staff table: Represents staff working for accounts/stores
-  Table staff {
-    id integer [primary key]          // Staff unique ID
-    account_id integer [not null]
-    store_id integer [not null]     // Reference to the account/store they work for (Foreign key to accounts table)
-    role varchar [not null]           // Staff role (e.g., "Manager", "Cashier")
-    created_at timestamp              // Record creation timestamp
-    updated_at timestamp              // Last update timestamp
-    deleted_at timestamp              // Soft delete timestamp
-  }
-  
-  // Products table: Represents products listed in stores
-  Table products {
-    id integer [primary key]          // Product unique ID
-    name varchar [not null]           // Name of the product
-    thumbnail varchar                 // Thumbnail URL/path
-    store_id integer [not null]       // Reference to the store that owns this product (Foreign key to stores table)
-    created_at timestamp              // Record creation timestamp
-    updated_at timestamp              // Last update timestamp
-    deleted_at timestamp              // Soft delete timestamp
-  }
-  
-  Ref: users.id - accounts.user_id
-  Ref: stores.id < products.store_id
-  Ref: accounts.id - staff.account_id  
-  Ref: staff.store_id - accounts.id
-  Ref: staff.store_id - stores.id
-  
+    id uuid [primary key]  
+    name varchar 
+    email varchar [unique, not null]
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null] // Soft delete
+}
+
+// Accounts table: Each user has one account
+Table accounts {
+    id uuid [primary key]
+    user_id uuid [not null] // FK to users
+    password varchar [not null] // Hashed password
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+}
+
+// Stores table: Represents stores owned by accounts
+Table stores {
+    id uuid [primary key] 
+    name varchar [not null]
+    account_id uuid [not null] // FK to accounts
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+}
+
+// Staff table: Employees working at stores
+Table staffs {
+    id uuid [primary key]  
+    account_id uuid [not null] // FK to accounts
+    store_id uuid [not null] // FK to stores
+    role varchar [not null] // Manager, Cashier, etc.
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+}
+
+// Products table: Stores products listed in a store
+Table products {
+    id uuid [primary key]
+    store_id uuid [not null] // FK to stores
+    name varchar [not null]
+    thumbnail varchar
+    price decimal(10,2) [not null]
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+}
+
+// Cart Items table: Stores items a user adds to their cart
+Table cart_items {
+    id uuid [primary key]
+    account_id uuid [not null] // FK to accounts
+    product_id uuid [not null] // FK to products
+    quantity integer [not null, default: 1] 
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+}
+
+// Orders table: Represents user purchases
+Table orders {
+    id uuid [primary key]    
+    account_id uuid [not null] // FK to accounts
+    total_price decimal(10,2) [not null] // Total price at checkout
+    status varchar [not null, default: 'pending'] // pending, paid, shipped, completed, canceled
+    payment_method varchar [not null] // credit_card, paypal, etc.
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+}
+
+// Order Products table: Tracks products within an order
+Table order_products {
+    order_id uuid [not null, primary key]  
+    product_id uuid [not null, primary key]  
+    quantity integer [not null, default: 1] 
+    price decimal(10,2) [not null] // Price at checkout
+    created_at timestamp              
+    updated_at timestamp              
+    deleted_at timestamp [null]
+}
+
+// Foreign Key Relationships
+Ref: users.id - accounts.user_id
+Ref: accounts.id - stores.account_id
+Ref: accounts.id - staffs.account_id  
+Ref: stores.id - staffs.store_id  
+Ref: stores.id - products.store_id
+Ref: accounts.id - cart_items.account_id
+Ref: products.id - cart_items.product_id
+Ref: accounts.id - orders.account_id
+Ref: orders.id - order_products.order_id
+Ref: products.id - order_products.product_id

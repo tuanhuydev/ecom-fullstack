@@ -4,6 +4,8 @@ import (
 	"go-api/internal/database"
 	"go-api/internal/dto"
 	"go-api/internal/models"
+	"go-api/pkg"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,13 +17,45 @@ func NewProductService() *ProductService {
 	return &ProductService{}
 }
 
-func (s *ProductService) GetAllProducts() ([]models.Product, error) {
-	var products []models.Product
-	if err := database.DB.Where("deleted_at IS NULL").Find(&products).Error; err != nil {
-		return nil, err
+func (s *ProductService) GetAllProducts(query dto.ProductQueryDTO) (pkg.PaginatedResponse, error) {
+	if query.Page <= 0 {
+		query.Page = 1
+	}
+	if query.PageSize <= 0 {
+		query.PageSize = 10
+	}
+	if query.SortBy == "" {
+		query.SortBy = "created_at"
+	}
+	if query.SortOrder == "" {
+		query.SortOrder = "dsc"
+	}
+	db := database.DB.Model(&models.Product{}).Where("deleted_at IS NULL")
+	// TODO: Apply filters
+
+	// Count
+	var totalCount int64
+	if err := db.Count(&totalCount).Error; err != nil {
+		return pkg.PaginatedResponse{}, err
 	}
 
-	return products, nil
+	// Pagination
+	offset := (query.Page - 1) * query.PageSize
+	totalPages := int(math.Ceil(float64(totalCount) / float64(query.PageSize)))
+
+	var products []models.Product
+	if err := database.DB.Order(query.SortBy + " " + query.SortOrder).Limit(query.PageSize).Offset(offset).Find(&products).Error; err != nil {
+		return pkg.PaginatedResponse{}, err
+	}
+	return pkg.PaginatedResponse{
+		Data: products,
+		Pagination: pkg.PaginationMeta{
+			CurrentPage:  query.Page,
+			PageSize:     query.PageSize,
+			TotalRecords: totalCount,
+			TotalPages:   totalPages,
+		},
+	}, nil
 }
 
 func (s *ProductService) GetProductById(id string) (models.Product, error) {

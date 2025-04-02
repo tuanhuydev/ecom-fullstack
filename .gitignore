@@ -2,21 +2,31 @@
 bin/
 dist/
 tmp/
-.output/
-.data/
-.nuxt/
-.nitro/
-.cache/
-dist/
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
 
 # Dependencies
 node_modules/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 
-# OS
+# Logs
+logs
+*.log
+
+# Misc
 .DS_Store
+.fleet
+.idea
+
 
 # Nuxt dev/build outputs
 
