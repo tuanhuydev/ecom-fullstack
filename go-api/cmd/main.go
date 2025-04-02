@@ -15,7 +15,6 @@ import (
 func startServer() {
 	fmt.Println("Starting application...")
 	var server *gin.Engine = gin.Default()
-	// Service declaration
 
 	// Controller declaration
 	userController := controllers.NewUserController()
@@ -53,12 +52,10 @@ func loadEnv() {
 			log.Fatalf("Required environment variable %s is not set", env)
 		}
 	}
-
 }
 
 func main() {
 	loadEnv()
 	database.ConnectDB()
-	database.RunMigrations()
 	startServer()
 }

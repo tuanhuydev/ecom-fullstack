@@ -17,7 +17,7 @@ func NewProductService() *ProductService {
 	return &ProductService{}
 }
 
-func (s *ProductService) GetAllProducts(query dto.ProductQueryDTO) (pkg.PaginatedResponse, error) {
+func (s *ProductService) GetAllProducts(query dto.PaginationQueryDTO) (pkg.PaginatedResponse, error) {
 	if query.Page <= 0 {
 		query.Page = 1
 	}
@@ -28,10 +28,9 @@ func (s *ProductService) GetAllProducts(query dto.ProductQueryDTO) (pkg.Paginate
 		query.SortBy = "created_at"
 	}
 	if query.SortOrder == "" {
-		query.SortOrder = "dsc"
+		query.SortOrder = "DESC"
 	}
 	db := database.DB.Model(&models.Product{}).Where("deleted_at IS NULL")
-	// TODO: Apply filters
 
 	// Count
 	var totalCount int64

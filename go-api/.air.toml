@@ -4,5 +4,5 @@ tmp_dir = "tmp"
 
 [build]
 # Path to main.go file from the project root
-cmd = "go build -o ./tmp/main ./cmd/main.go"
+cmd = "go build -o ./tmp/main.exe ./cmd/main.go"
 bin = "tmp/main"
