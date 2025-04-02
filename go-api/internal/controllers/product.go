@@ -8,17 +8,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterProductRoutes(server *gin.Engine) {
-	routes := server.Group("products")
-	routes.GET("/", GetAllProducts)
-	routes.GET("/:id", GetProductById)
-	routes.POST("/", CreateProduct)
-	routes.PUT("/:id", UpdateProduct)
-	routes.DELETE("/:id", DeleteProduct)
+type ProductController struct {
+	ProductService *services.ProductService
 }
 
-func GetAllProducts(ctx *gin.Context) {
-	products, err := services.GetAllProductsService()
+func NewProductController() *ProductController {
+	return &ProductController{
+		ProductService: services.NewProductService(),
+	}
+}
+
+func (c ProductController) RegisterRoutes(server *gin.Engine) {
+	routes := server.Group("products")
+	routes.GET("/", c.GetAllProducts)
+	routes.GET("/:id", c.GetProductById)
+	routes.POST("/", c.CreateProduct)
+	routes.PUT("/:id", c.UpdateProduct)
+	routes.DELETE("/:id", c.DeleteProduct)
+}
+
+func (c *ProductController) GetAllProducts(ctx *gin.Context) {
+	products, err := c.ProductService.GetAllProducts()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -30,9 +40,9 @@ func GetAllProducts(ctx *gin.Context) {
 		"data": products,
 	})
 }
-func GetProductById(ctx *gin.Context) {
+func (c *ProductController) GetProductById(ctx *gin.Context) {
 
-	product, err := services.GetProductByIdService(ctx.Param("id"))
+	product, err := c.ProductService.GetProductById(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -44,7 +54,7 @@ func GetProductById(ctx *gin.Context) {
 	})
 }
 
-func CreateProduct(ctx *gin.Context) {
+func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	var body dto.CreateProductDTO
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -53,7 +63,7 @@ func CreateProduct(ctx *gin.Context) {
 		return
 	}
 
-	newProductId, error := services.CreateProductService(body)
+	newProductId, error := c.ProductService.CreateProduct(body)
 
 	if error != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -68,7 +78,7 @@ func CreateProduct(ctx *gin.Context) {
 	})
 }
 
-func UpdateProduct(ctx *gin.Context) {
+func (c *ProductController) UpdateProduct(ctx *gin.Context) {
 	var body dto.UpdateProductDTO
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -76,7 +86,7 @@ func UpdateProduct(ctx *gin.Context) {
 		})
 		return
 	}
-	error := services.UpdateProductService(ctx.Param("id"), body)
+	error := c.ProductService.UpdateProduct(ctx.Param("id"), body)
 	if error != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": error.Error(),
@@ -89,8 +99,8 @@ func UpdateProduct(ctx *gin.Context) {
 	})
 }
 
-func DeleteProduct(ctx *gin.Context) {
-	error := services.DeleteProductService(ctx.Param("id"))
+func (c *ProductController) DeleteProduct(ctx *gin.Context) {
+	id, error := c.ProductService.DeleteProduct(ctx.Param("id"))
 	if error != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": error.Error(),
@@ -98,7 +108,7 @@ func DeleteProduct(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{
-		"data":    ctx.Param("id"),
+		"data":    id,
 		"message": "Product deleted successfully",
 	})
 }
