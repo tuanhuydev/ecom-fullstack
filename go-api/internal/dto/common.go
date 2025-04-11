@@ -5,4 +5,5 @@ type PaginationQueryDTO struct {
 	PageSize  int    `form:"pageSize"`
 	SortBy    string `form:"sortBy"`
 	SortOrder string `form:"sortOrder"`
+	Search    string `form:"search"`
 }

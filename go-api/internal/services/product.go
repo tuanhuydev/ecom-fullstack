@@ -6,6 +6,7 @@ import (
 	"go-api/internal/models"
 	"go-api/pkg"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,7 +18,8 @@ func NewProductService() *ProductService {
 	return &ProductService{}
 }
 
-func (s *ProductService) GetAllProducts(query dto.PaginationQueryDTO) (pkg.PaginatedResponse, error) {
+// Helper function to apply default values to query parameters
+func applyDefaultQueryValues(query *dto.PaginationQueryDTO) {
 	if query.Page <= 0 {
 		query.Page = 1
 	}
@@ -27,25 +29,43 @@ func (s *ProductService) GetAllProducts(query dto.PaginationQueryDTO) (pkg.Pagin
 	if query.SortBy == "" {
 		query.SortBy = "created_at"
 	}
-	if query.SortOrder == "" {
+	if query.SortOrder == "" || (query.SortOrder != "ASC" && query.SortOrder != "DESC") {
 		query.SortOrder = "DESC"
 	}
+	if query.Search != "" {
+		query.Search = "%" + query.Search + "%"
+	}
+}
+
+func (s *ProductService) GetAllProducts(query dto.PaginationQueryDTO) (pkg.PaginatedResponse, error) {
+	applyDefaultQueryValues(&query)
+
 	db := database.DB.Model(&models.Product{}).Where("deleted_at IS NULL")
 
-	// Count
+	if query.Search != "" {
+		db = db.Where("LOWER(name) LIKE ?", strings.ToLower(query.Search))
+	}
+
+	// Count total records
 	var totalCount int64
 	if err := db.Count(&totalCount).Error; err != nil {
 		return pkg.PaginatedResponse{}, err
 	}
 
-	// Pagination
+	// Pagination calculations
 	offset := (query.Page - 1) * query.PageSize
 	totalPages := int(math.Ceil(float64(totalCount) / float64(query.PageSize)))
 
+	// Fetch products
 	var products []models.Product
-	if err := database.DB.Order(query.SortBy + " " + query.SortOrder).Limit(query.PageSize).Offset(offset).Find(&products).Error; err != nil {
+	if err := db.Order(query.SortBy + " " + query.SortOrder).
+		Limit(query.PageSize).
+		Offset(offset).
+		Find(&products).Error; err != nil {
 		return pkg.PaginatedResponse{}, err
 	}
+
+	// Return paginated response
 	return pkg.PaginatedResponse{
 		Data: products,
 		Pagination: pkg.PaginationMeta{
