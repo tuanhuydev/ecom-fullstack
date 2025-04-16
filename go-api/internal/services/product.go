@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"go-api/internal/database"
 	"go-api/internal/dto"
 	"go-api/internal/models"
@@ -17,6 +19,8 @@ type ProductService struct{}
 func NewProductService() *ProductService {
 	return &ProductService{}
 }
+
+var ctx = context.Background()
 
 // Helper function to apply default values to query parameters
 func applyDefaultQueryValues(query *dto.PaginationQueryDTO) {
@@ -38,6 +42,30 @@ func applyDefaultQueryValues(query *dto.PaginationQueryDTO) {
 }
 
 func (s *ProductService) GetAllProducts(query dto.PaginationQueryDTO) (pkg.PaginatedResponse, error) {
+	cacheKey := "products:" + query.SortBy + ":" + query.SortOrder + ":" + query.Search
+	redisClient := database.GetRedisClient()
+	if cachedData, err := redisClient.Get(ctx, cacheKey).Result(); err == nil {
+		// If cache hit, return cached data
+		var cachedResponse pkg.PaginatedResponse
+		if err := json.Unmarshal([]byte(cachedData), &cachedResponse); err == nil {
+			return cachedResponse, nil
+		}
+	}
+
+	// If cache miss, fetch from database
+	products, err := s.getProductsFromDB(query)
+	if err != nil {
+		return pkg.PaginatedResponse{}, err
+	}
+
+	// Cache the result for future requests
+	if data, err := json.Marshal(products); err == nil {
+		redisClient.Set(ctx, cacheKey, data, 24*time.Hour)
+	}
+	return products, nil
+}
+
+func (s *ProductService) getProductsFromDB(query dto.PaginationQueryDTO) (pkg.PaginatedResponse, error) {
 	applyDefaultQueryValues(&query)
 
 	db := database.DB.Model(&models.Product{}).Where("deleted_at IS NULL")
@@ -144,4 +172,14 @@ func (s *ProductService) DeleteProduct(id string) (string, error) {
 		return "", err
 	}
 	return id, nil
+}
+
+func (s *ProductService) GetProductsByCollection(collectionID string) ([]models.Product, error) {
+	var products []models.Product
+	if err := database.DB.Joins("JOIN collections_products ON collections_products.product_id = products.id").
+		Where("collections_products.collection_id = ?", collectionID).
+		Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
 }

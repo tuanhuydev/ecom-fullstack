@@ -45,6 +45,7 @@ func (c *ProductController) GetAllProducts(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response)
 }
+
 func (c *ProductController) GetProductById(ctx *gin.Context) {
 
 	product, err := c.ProductService.GetProductById(ctx.Param("id"))

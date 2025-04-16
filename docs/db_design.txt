@@ -39,16 +39,39 @@ Table staffs {
     deleted_at timestamp [null]
 }
 
+// Collections table: Represents collections of products
+Table collections {
+    id uuid [primary key]
+    name varchar [not null]
+    description text [null]
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+}
+
 // Products table: Stores products listed in a store
 Table products {
     id uuid [primary key]
-    store_id uuid [not null] // FK to stores
     name varchar [not null]
     thumbnail varchar
     price decimal(10,2) [not null]
     created_at timestamp
     updated_at timestamp
     deleted_at timestamp [null]
+}
+
+// Product_Collections table: Stores the many-to-many relationship between products and collections
+Table product_collections {
+    product_id uuid [not null] // FK to products
+    collection_id uuid [not null] // FK to collections
+    created_at timestamp
+    updated_at timestamp
+    deleted_at timestamp [null]
+
+    // Composite primary key
+    indexes {
+        (product_id, collection_id) [unique]
+    }
 }
 
 // Cart Items table: Stores items a user adds to their cart
@@ -90,9 +113,10 @@ Ref: users.id - accounts.user_id
 Ref: accounts.id - stores.account_id
 Ref: accounts.id - staffs.account_id  
 Ref: stores.id - staffs.store_id  
-Ref: stores.id - products.store_id
-Ref: accounts.id - cart_items.account_id
 Ref: products.id - cart_items.product_id
-Ref: accounts.id - orders.account_id
+Ref: accounts.id - cart_items.account_id
+Ref: products.id - orders.account_id
 Ref: orders.id - order_products.order_id
 Ref: products.id - order_products.product_id
+Ref: products.id - product_collections.product_id
+Ref: collections.id - product_collections.collection_id

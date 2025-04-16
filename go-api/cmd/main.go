@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-api/internal/controllers"
 	"go-api/internal/database"
+	"go-api/internal/services"
 	"log"
 	"net/http"
 	"os"
@@ -19,13 +20,15 @@ func startServer() {
 
 	// CORS middleware
 	server.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
 
+	// Service declaration
+	productService := services.NewProductService()
 	// Controller declaration
 	userController := controllers.NewUserController()
 	userController.RegisterRoutes(server)
@@ -35,6 +38,9 @@ func startServer() {
 
 	authController := controllers.NewAuthController()
 	authController.RegisterAuthRoutes(server)
+	// Colections
+	collectionController := controllers.NewCollectionController(productService)
+	collectionController.RegisterRoutes(server)
 
 	server.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -65,7 +71,9 @@ func loadEnv() {
 }
 
 func main() {
+
 	loadEnv()
 	database.ConnectDB()
+	database.ConnectRedis()
 	startServer()
 }
