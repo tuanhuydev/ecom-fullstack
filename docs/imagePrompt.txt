@@ -1,0 +1,17 @@
+Generate a professional, high-quality product image of instax mini 90. The product should be positioned at a slight angle to the right, where the left side of the product is slightly closer to the viewer, and the right side curves away, creating a dynamic perspective that highlights the front, side, and key features. The camera should be at eye level to the product, ensuring an evenly balanced and natural viewpoint.
+
+Background:
+The background should be a completely smooth, minimalist white color (#FFFFFF) with no texture or additional elements.
+Add a very soft, subtle light-gray gradient (#F8F8F8) around the base of the product, primarily concentrated below and slightly behind the product, to provide a sense of depth and keep it visually interesting.
+The gradient should fade seamlessly into the white background to maintain a clean and professional look.
+Include a faint, diffused shadow beneath the product that is slightly blurred and circular in shape. This shadow should match tones of light gray (#EAEAEA), with edges that taper off softly into the gradient. The shadow should be subtle enough to retain focus on the product but provide grounding.
+Lighting:
+Use bright, evenly distributed studio lighting to illuminate the product.
+Ensure the light comes from slightly above and in front of the product to cast soft, natural shadows that emphasize the product’s texture and detailing.
+The lighting should also create a subtle reflection or sheen on polished or reflective surfaces (like metallic parts, glass, or lens surfaces) to convey realism without overpowering the product.
+Keep the background lighting consistent and free of hotspots or uneven patches.
+Avoid harsh shadows; shadows should be soft, faint, and proportional to the product's structure.
+Product Position and Focus:
+Position the product angled slightly to the right, such that its left front portion is closer to the viewer while the right rear is slightly receding.
+Ensure all major parts of the product (e.g., lens, buttons, logos, text labels, or defining features) are in sharp focus and clearly legible.
+Any branding or logo (e.g., product name or company logo) should be prominent and centered within the product's visible area.

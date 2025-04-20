@@ -1,14 +1,45 @@
 <script setup lang="ts">
+import { toTypedSchema } from '@vee-validate/zod';
+import { useForm } from 'vee-validate';
+import { z } from 'zod';
+import InputField from '~/components/InputField.vue';
+import { useAuthStore } from '~/stores/authStore';
 
-const form = reactive({
-  email: '',
-  password: ''
+// Using Nuxt's built-in composable for toast
+const router = useRouter();
+const authStore = useAuthStore();
+const toast = useToast()
+
+const signInSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
 
+const { handleSubmit, resetForm } = useForm({
+  validationSchema: toTypedSchema(signInSchema),
+  initialValues: {
+    email: '',
+    password: '',
+  },
+});
 
-const handleSubmit = async () => {
-  console.log('Form submitted:', form);
-};
+const onSubmit = handleSubmit(async (values) => {
+  try {
+    const { success, error } = await authStore.login(values.email, values.password);
+    
+    if (!success) {
+      toast.error({title: `Error during sign in: ${error}`});
+      return;
+    }
+    
+    toast.success({title: 'Sign in successful! Redirecting to home...'});
+    resetForm();
+    router.push('/');
+  } catch (error) {
+    toast.error({title:'An unexpected error occurred. Please try again.'});
+    console.error('Error during sign in:', error);
+  }
+});
 </script>
 
 <template>
@@ -16,11 +47,10 @@ const handleSubmit = async () => {
     <div class="w-full max-w-md bg-white p-8 rounded shadow">
       <h1 class="text-2xl font-bold mb-6">Sign In</h1>
 
-      <form @submit.prevent="handleSubmit">
+      <form @submit.prevent="onSubmit">
         <div class="mb-4">
           <InputField
-            id="email"
-            v-model="form.email"
+            name="email"              
             label="Email"
             type="email"
           />
@@ -28,8 +58,7 @@ const handleSubmit = async () => {
 
         <div class="mb-4">
           <InputField
-            id="password"
-            v-model="form.password"
+            name="password"
             label="Password"
             type="Password"
           />

@@ -1,24 +1,52 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { toTypedSchema } from '@vee-validate/zod';
+import { useForm } from 'vee-validate';
+import { useRouter } from 'vue-router';
+import { z } from 'zod';
 import InputField from '~/components/InputField.vue';
 
-const form = ref({
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
+const router = useRouter();
+const toast = useToast();
+const config = useRuntimeConfig();
+
+const signUpSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
+  confirmPassword: z.string().min(6, 'Confirm Password must be at least 6 characters long')
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
 });
 
-const errors = ref({
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
+const { handleSubmit, resetForm } = useForm({
+  validationSchema: toTypedSchema(signUpSchema),
+  initialValues: {
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  },
 });
 
-const handleSubmit = async () => {
-  console.log('Form submitted:', form.value);
-};
+const onSubmit = handleSubmit(async (values) => {
+  try {
+    const response: Response = await $fetch(`${config.public.apiUrl}/auth/sign-up`, {
+      method: 'POST',
+      body: values,
+    });
+    if (response.ok) {
+      toast.error({title: `Error during sign up`});
+    } else {
+      toast.success({title: 'Sign up successful! Redirecting to home...'});
+      resetForm();
+      router.push('/');
+    }
+  } catch (error) {
+    toast.error({title:'An unexpected error occurred. Please try again.'});
+    console.error('Error during sign up:', error);
+  }
+});
 </script>
 
 <template>
@@ -26,36 +54,28 @@ const handleSubmit = async () => {
     <div class="w-full max-w-md bg-white p-8 rounded shadow">
       <h1 class="text-2xl font-bold mb-6">Sign Up</h1>
 
-      <form @submit.prevent="handleSubmit">
+      <form @submit.prevent="onSubmit">
         <InputField
-          id="name"
-          v-model="form.name"
+          name="name"
           label="Name"
-          :error="errors.name"
           type="text"
         />
 
         <InputField
-          id="email"
-          v-model="form.email"
+          name="email"
           label="Email"
-          :error="errors.email"
           type="email"
         />
 
         <InputField
-          id="password"
-          v-model="form.password"
+          name="password"
           label="Password"
-          :error="errors.password"
           type="password"
         />
 
         <InputField
-          id="confirmPassword"
-          v-model="form.confirmPassword"
+          name="confirmPassword"
           label="Confirm Password"
-          :error="errors.confirmPassword"
           type="password"
         />
 

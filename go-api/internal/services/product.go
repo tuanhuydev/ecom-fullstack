@@ -129,6 +129,14 @@ func (s *ProductService) CreateProduct(body dto.CreateProductDTO) (string, error
 		return "", err
 	}
 
+	// Invalidate product cache after creating a new product
+	redisClient := database.GetRedisClient()
+	// Match all product list cache keys
+	keys, _ := redisClient.Keys(ctx, "products:*").Result()
+	if len(keys) > 0 {
+		redisClient.Del(ctx, keys...)
+	}
+
 	return productModel.ID, nil
 }
 
@@ -155,10 +163,16 @@ func (s *ProductService) UpdateProduct(id string, body dto.UpdateProductDTO) err
 		updatedProduct["thumbnail"] = body.Thumbnail
 	}
 
-	// Update the product with the provided fields
 	if err := database.DB.Model(&models.Product{}).Where("id = ?", id).Updates(updatedProduct).Error; err != nil {
 		return err
 	}
+
+	redisClient := database.GetRedisClient()
+	keys, _ := redisClient.Keys(ctx, "products:*").Result()
+	if len(keys) > 0 {
+		redisClient.Del(ctx, keys...)
+	}
+	redisClient.Del(ctx, "product:"+id)
 
 	return nil
 }
@@ -171,6 +185,17 @@ func (s *ProductService) DeleteProduct(id string) (string, error) {
 	if err := database.DB.Model(&models.Product{}).Where("id = ?", id).Updates(updateProduct).Error; err != nil {
 		return "", err
 	}
+
+	// Invalidate product cache after deleting a product
+	redisClient := database.GetRedisClient()
+	// Match all product list cache keys
+	keys, _ := redisClient.Keys(ctx, "products:*").Result()
+	if len(keys) > 0 {
+		redisClient.Del(ctx, keys...)
+	}
+	// Also invalidate any specific product cache
+	redisClient.Del(ctx, "product:"+id)
+
 	return id, nil
 }
 

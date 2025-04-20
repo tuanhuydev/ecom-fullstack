@@ -6,9 +6,15 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/icon',
     '@pinia/nuxt',
+    'nuxt-toast',
   ],
   pinia: {
     storesDirs: ['./stores/**'],
+  },
+  runtimeConfig: {
+    public: {
+      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:8080',
+    }
   },
   devtools: { enabled: true }
 })

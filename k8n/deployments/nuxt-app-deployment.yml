@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nuxt-app
+  labels:
+    app: nuxt-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nuxt-app
+  template:
+    metadata:
+      labels:
+        app: nuxt-app
+    spec:
+      containers:
+      - name: nuxt-app
+        image: tuanhuydev/nuxt-app:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NUXT_PUBLIC_API_URL
+          value: "http://go-api-service:8080"
+        resources: # Add resource requests and limits here
+          requests:
+            memory: "128Mi" # Minimum memory container needs
+            cpu: "250m"     # Minimum CPU (1 CPU = 1000m, so this is 25%)
+          limits:
+            memory: "256Mi" # Maximum memory container is allowed
+            cpu: "500m"     # Maximum CPU (50% of a CPU)
+      restartPolicy: Always
