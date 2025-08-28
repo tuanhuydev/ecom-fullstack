@@ -20,22 +20,22 @@ func NewProductController() *ProductController {
 
 func (c ProductController) RegisterRoutes(server *gin.Engine) {
 	routes := server.Group("products")
-	routes.GET("/", c.GetAllProducts)
-	routes.GET("/:id", c.GetProductById)
-	routes.POST("/", c.CreateProduct)
-	routes.PUT("/:id", c.UpdateProduct)
-	routes.DELETE("/:id", c.DeleteProduct)
+	routes.GET("", c.GetAllProducts)
+	routes.GET(":id", c.GetProductById)
+	routes.POST("", c.CreateProduct)
+	routes.PUT(":id", c.UpdateProduct)
+	routes.DELETE(":id", c.DeleteProduct)
 }
 
 func (c *ProductController) GetAllProducts(ctx *gin.Context) {
-	var query dto.ProductQueryDTO
+	var query dto.PaginationQueryDTO
 	if err := ctx.ShouldBindQuery(&query); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid query parameters",
 		})
 	}
 
-	products, err := c.ProductService.GetAllProducts(query)
+	response, err := c.ProductService.GetAllProducts(query)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -43,10 +43,9 @@ func (c *ProductController) GetAllProducts(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"data": products,
-	})
+	ctx.JSON(http.StatusOK, response)
 }
+
 func (c *ProductController) GetProductById(ctx *gin.Context) {
 
 	product, err := c.ProductService.GetProductById(ctx.Param("id"))

@@ -48,6 +48,10 @@ logs
 .env.*
 !.env.example
 
+# Kubernetes secrets (exclude samples)
+k8n/secrets/*.yml
+!k8n/secrets/*.sample.yml
+
 
 
 

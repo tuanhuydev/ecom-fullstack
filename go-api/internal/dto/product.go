@@ -12,10 +12,3 @@ type UpdateProductDTO struct {
 	Quantity  *int     `json:"quantity" validate:"omitempty,gte=0"`
 	Thumbnail *string  `json:"thumbnail" validate:"omitempty,url"`
 }
-
-type ProductQueryDTO struct {
-	Page      int    `form:"page"`
-	PageSize  int    `form:"pageSize"`
-	SortBy    string `form:"sortBy"`
-	SortOrder string `form:"sortOrder"`
-}

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"go-api/internal/controllers"
 	"go-api/internal/database"
+	"go-api/internal/services"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -15,8 +17,18 @@ import (
 func startServer() {
 	fmt.Println("Starting application...")
 	var server *gin.Engine = gin.Default()
-	// Service declaration
 
+	// CORS middleware
+	server.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
+	// Service declaration
+	productService := services.NewProductService()
 	// Controller declaration
 	userController := controllers.NewUserController()
 	userController.RegisterRoutes(server)
@@ -26,6 +38,9 @@ func startServer() {
 
 	authController := controllers.NewAuthController()
 	authController.RegisterAuthRoutes(server)
+	// Colections
+	collectionController := controllers.NewCollectionController(productService)
+	collectionController.RegisterRoutes(server)
 
 	server.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -33,7 +48,7 @@ func startServer() {
 		})
 	})
 
-	if err := server.Run(); err != nil {
+	if err := server.Run("0.0.0.0:8080"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
@@ -53,12 +68,12 @@ func loadEnv() {
 			log.Fatalf("Required environment variable %s is not set", env)
 		}
 	}
-
 }
 
 func main() {
+
 	loadEnv()
 	database.ConnectDB()
-	database.RunMigrations()
+	database.ConnectRedis()
 	startServer()
 }

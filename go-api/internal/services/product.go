@@ -1,11 +1,14 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"go-api/internal/database"
 	"go-api/internal/dto"
 	"go-api/internal/models"
 	"go-api/pkg"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,7 +20,10 @@ func NewProductService() *ProductService {
 	return &ProductService{}
 }
 
-func (s *ProductService) GetAllProducts(query dto.ProductQueryDTO) (pkg.PaginatedResponse, error) {
+var ctx = context.Background()
+
+// Helper function to apply default values to query parameters
+func applyDefaultQueryValues(query *dto.PaginationQueryDTO) {
 	if query.Page <= 0 {
 		query.Page = 1
 	}
@@ -27,26 +33,67 @@ func (s *ProductService) GetAllProducts(query dto.ProductQueryDTO) (pkg.Paginate
 	if query.SortBy == "" {
 		query.SortBy = "created_at"
 	}
-	if query.SortOrder == "" {
-		query.SortOrder = "dsc"
+	if query.SortOrder == "" || (query.SortOrder != "ASC" && query.SortOrder != "DESC") {
+		query.SortOrder = "DESC"
 	}
-	db := database.DB.Model(&models.Product{}).Where("deleted_at IS NULL")
-	// TODO: Apply filters
+	if query.Search != "" {
+		query.Search = "%" + query.Search + "%"
+	}
+}
 
-	// Count
+func (s *ProductService) GetAllProducts(query dto.PaginationQueryDTO) (pkg.PaginatedResponse, error) {
+	cacheKey := "products:" + query.SortBy + ":" + query.SortOrder + ":" + query.Search
+	redisClient := database.GetRedisClient()
+	if cachedData, err := redisClient.Get(ctx, cacheKey).Result(); err == nil {
+		// If cache hit, return cached data
+		var cachedResponse pkg.PaginatedResponse
+		if err := json.Unmarshal([]byte(cachedData), &cachedResponse); err == nil {
+			return cachedResponse, nil
+		}
+	}
+
+	// If cache miss, fetch from database
+	products, err := s.getProductsFromDB(query)
+	if err != nil {
+		return pkg.PaginatedResponse{}, err
+	}
+
+	// Cache the result for future requests
+	if data, err := json.Marshal(products); err == nil {
+		redisClient.Set(ctx, cacheKey, data, 24*time.Hour)
+	}
+	return products, nil
+}
+
+func (s *ProductService) getProductsFromDB(query dto.PaginationQueryDTO) (pkg.PaginatedResponse, error) {
+	applyDefaultQueryValues(&query)
+
+	db := database.DB.Model(&models.Product{}).Where("deleted_at IS NULL")
+
+	if query.Search != "" {
+		db = db.Where("LOWER(name) LIKE ?", strings.ToLower(query.Search))
+	}
+
+	// Count total records
 	var totalCount int64
 	if err := db.Count(&totalCount).Error; err != nil {
 		return pkg.PaginatedResponse{}, err
 	}
 
-	// Pagination
+	// Pagination calculations
 	offset := (query.Page - 1) * query.PageSize
 	totalPages := int(math.Ceil(float64(totalCount) / float64(query.PageSize)))
 
+	// Fetch products
 	var products []models.Product
-	if err := database.DB.Order(query.SortBy + " " + query.SortOrder).Limit(query.PageSize).Offset(offset).Find(&products).Error; err != nil {
+	if err := db.Order(query.SortBy + " " + query.SortOrder).
+		Limit(query.PageSize).
+		Offset(offset).
+		Find(&products).Error; err != nil {
 		return pkg.PaginatedResponse{}, err
 	}
+
+	// Return paginated response
 	return pkg.PaginatedResponse{
 		Data: products,
 		Pagination: pkg.PaginationMeta{
@@ -82,6 +129,14 @@ func (s *ProductService) CreateProduct(body dto.CreateProductDTO) (string, error
 		return "", err
 	}
 
+	// Invalidate product cache after creating a new product
+	redisClient := database.GetRedisClient()
+	// Match all product list cache keys
+	keys, _ := redisClient.Keys(ctx, "products:*").Result()
+	if len(keys) > 0 {
+		redisClient.Del(ctx, keys...)
+	}
+
 	return productModel.ID, nil
 }
 
@@ -108,10 +163,16 @@ func (s *ProductService) UpdateProduct(id string, body dto.UpdateProductDTO) err
 		updatedProduct["thumbnail"] = body.Thumbnail
 	}
 
-	// Update the product with the provided fields
 	if err := database.DB.Model(&models.Product{}).Where("id = ?", id).Updates(updatedProduct).Error; err != nil {
 		return err
 	}
+
+	redisClient := database.GetRedisClient()
+	keys, _ := redisClient.Keys(ctx, "products:*").Result()
+	if len(keys) > 0 {
+		redisClient.Del(ctx, keys...)
+	}
+	redisClient.Del(ctx, "product:"+id)
 
 	return nil
 }
@@ -124,5 +185,26 @@ func (s *ProductService) DeleteProduct(id string) (string, error) {
 	if err := database.DB.Model(&models.Product{}).Where("id = ?", id).Updates(updateProduct).Error; err != nil {
 		return "", err
 	}
+
+	// Invalidate product cache after deleting a product
+	redisClient := database.GetRedisClient()
+	// Match all product list cache keys
+	keys, _ := redisClient.Keys(ctx, "products:*").Result()
+	if len(keys) > 0 {
+		redisClient.Del(ctx, keys...)
+	}
+	// Also invalidate any specific product cache
+	redisClient.Del(ctx, "product:"+id)
+
 	return id, nil
+}
+
+func (s *ProductService) GetProductsByCollection(collectionID string) ([]models.Product, error) {
+	var products []models.Product
+	if err := database.DB.Joins("JOIN collections_products ON collections_products.product_id = products.id").
+		Where("collections_products.collection_id = ?", collectionID).
+		Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
 }
